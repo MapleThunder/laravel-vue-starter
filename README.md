@@ -4,58 +4,27 @@ A simple Laravel starter kit that uses Inertia and Vue for the front end. I deci
 
 ## Setting up the new project
 
-### Requirements
+> Requires: **Docker**
 
-- PHP8+
-- Laravel CLI
-- Postgres
-- Composer
-- Node
-- pnpm
-
-Create a new Laravel project using the Laravel CLI:
+Clone the starter kit.
 
 ```bash
-laravel new vue_starter
-cd vue_starter
+git clone https://github.com/MapleThunder/laravel-vue-starter.git PROJECT_NAME
+cd PROJECT_NAME
 ```
 
-Create the database for local development:
-
-```bash
-# Create user with a password
-sudo -u postgres createuser --pwprompt vuest_user
-# Create database where created user is the owner
-sudo -u postgres createdb -O vuest_user vuest_db
-```
-
-Update the database credentials in the `.env` file:
+Update the database credentials in the `.env` file.
 
 ```env
-DB_CONNECTION=pgsql
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_DATABASE=vuest_db
-DB_USERNAME=vuest_user
-DB_PASSWORD=localpw
+DB_DATABASE=DB_NAME
+DB_USERNAME=DB_USER
+DB_PASSWORD=DB_PASSWORD
 ```
 
-Run the database migrations and the composer & npm installs:
+If this is the **first time building the app**, run `./startup.sh` to build the containers, run them, and initialize the running app.
 
-```bash
-php artisan migrate
-composer install
-pnpm install && pnpm build
-```
+Otherwise **start** the app with `./run.sh`.
 
-Serve the application and confirm it isn't throwing an error:
+You can **stop** the app with `./stop.sh`.
 
-```bash
-php artisan serve
-```
-
-Run the vite server so frontend changes will take effect:
-
-```bash
-pnpm dev
-```
+> Both the run and stop scripts are simply wrappers for `docker compose` just because it's less typing for me.

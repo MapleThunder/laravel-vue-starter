@@ -14,10 +14,10 @@ cd PROJECT_NAME
 git remote set-url origin NEW_ORIGIN
 ```
 
-If this is the **first time building the app**, run `./startup.sh` to build the containers, run them, and initialize the running app.
+If this is the **first time building the app**, run `./startup` to build the containers, run them, and initialize the running app.
 
-Otherwise **start** the app with `./run.sh`.
+Otherwise **start** the app with `./run`.
 
-You can **stop** the app with `./stop.sh`.
+You can **stop** the app with `./stop`.
 
 > Both the run and stop scripts are simply wrappers for `docker compose` just because it's less typing for me.

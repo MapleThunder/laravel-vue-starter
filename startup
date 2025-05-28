@@ -42,6 +42,10 @@ eval $SED_INPLACE "s|^DB_PORT=5432|# DB_PORT=5432|" .env.testing
 eval $SED_INPLACE "s|^DB_USERNAME=<DB_USERNAME>|# DB_USERNAME=<DB_USERNAME>|" .env.testing
 eval $SED_INPLACE "s|^DB_PASSWORD=<DB_PASSWORD>|# DB_PASSWORD=<DB_PASSWORD>|" .env.testing
 
+# Install dependencies
+composer install
+pnpm install && pnpm build
+
 docker compose build
 docker compose up -d
 

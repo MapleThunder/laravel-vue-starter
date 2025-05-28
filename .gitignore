@@ -1,0 +1,47 @@
+# Laravel
+/vendor/
+/public/storage
+/storage/*.key
+.env*
+!.env.example
+!.env.testing
+.phpunit.result.cache
+Homestead.yaml
+Homestead.json
+/.vagrant
+/public/hot
+npm-debug.log
+yarn-error.log
+
+# Node/Vue
+/node_modules/
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/dist
+.DS_Store
+
+# Compiled assets (if using Laravel Mix or Vite)
+public/js/*
+public/css/*
+!public/js/.gitkeep
+!public/css/.gitkeep
+
+# Editor directories and files
+.idea/
+.vscode/
+*.sublime*
+*.sw?
+*.iws
+*.iml
+*.ipr
+
+# OS files
+Thumbs.db
+
+# Others
+bower_components/
+*.bak
+*.tmp

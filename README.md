@@ -6,19 +6,12 @@ A simple Laravel starter kit that uses Inertia and Vue for the front end. I deci
 
 > Requires: **Docker**
 
-Clone the starter kit.
+Clone the starter kit then replace the git info with the new project info.
 
 ```bash
 git clone https://github.com/MapleThunder/laravel-vue-starter.git PROJECT_NAME
 cd PROJECT_NAME
-```
-
-Update the database credentials in the `.env` file.
-
-```env
-DB_DATABASE=DB_NAME
-DB_USERNAME=DB_USER
-DB_PASSWORD=DB_PASSWORD
+git remote set-url origin NEW_ORIGIN
 ```
 
 If this is the **first time building the app**, run `./startup.sh` to build the containers, run them, and initialize the running app.

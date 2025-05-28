@@ -1,7 +1,50 @@
 #!/bin/bash
 
+# Detect platform
+OS_TYPE=$(uname)
+
+if [[ "$OS_TYPE" == "Darwin" ]]; then
+    SED_INPLACE="sed -i ''"
+elif [[ "$OS_TYPE" == "Linux" ]]; then
+    SED_INPLACE="sed -i"
+else
+    echo "Unsupported OS: $OS_TYPE"
+    exit 1
+fi
+
+# Get database credentials from user
+read -p "DB Name [db]: " db_name
+db_name=${db_name:-db}
+
+read -p "DB User [user]: " db_user
+db_user=${db_user:-user}
+
+read -s -p "DB Password [secret]: " db_pw
+echo
+db_pw=${db_pw:-secret}
+
+# Create the .env file
+# Check if .env exists
+# if so move it to .env.bak.DATE
+cp .env.example .env
+cp .env.example .env.testing
+
+# Run platform-specific sed commands
+eval $SED_INPLACE "s|^DB_DATABASE=<DB_DATABASE>|DB_DATABASE=$db_name|" .env
+eval $SED_INPLACE "s|^DB_USERNAME=<DB_USERNAME>|DB_USERNAME=$db_user|" .env
+eval $SED_INPLACE "s|^DB_PASSWORD=<DB_PASSWORD>|DB_PASSWORD=$db_pass|" .env
+
+eval $SED_INPLACE "s|^DB_CONNECTION=pgsql|DB_CONNECTION=sqlite|" .env.testing
+eval $SED_INPLACE "s|^DB_DATABASE=<DB_DATABASE>|DB_DATABASE=:memory:|" .env.testing
+# Comment out the unneeded database fields in the testing file
+eval $SED_INPLACE "s|^DB_HOST=db|# DB_HOST=db|" .env.testing
+eval $SED_INPLACE "s|^DB_PORT=5432|# DB_PORT=5432|" .env.testing
+eval $SED_INPLACE "s|^DB_USERNAME=<DB_USERNAME>|# DB_USERNAME=<DB_USERNAME>|" .env.testing
+eval $SED_INPLACE "s|^DB_PASSWORD=<DB_PASSWORD>|# DB_PASSWORD=<DB_PASSWORD>|" .env.testing
+
 docker compose build
 docker compose up -d
 
 docker compose exec app php artisan migrate
 docker compose exec app php artisan key:generate
+docker compose exec app php artisan key:generate --env=testing

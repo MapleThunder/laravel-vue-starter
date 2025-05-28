@@ -2,7 +2,7 @@
 
 # Detect platform
 OS_TYPE=$(uname)
-
+# sed is called differently on Linux and MacOS so I need to account for that.
 if [[ "$OS_TYPE" == "Darwin" ]]; then
     SED_INPLACE="sed -i ''"
 elif [[ "$OS_TYPE" == "Linux" ]]; then
@@ -19,36 +19,54 @@ db_name=${db_name:-db}
 read -p "DB User [user]: " db_user
 db_user=${db_user:-user}
 
-read -s -p "DB Password [secret]: " db_pw
+read -s -p "DB Password [secret]: " input
 echo
-db_pw=${db_pw:-secret}
+db_pw=${input:-secret}
 
-# Create the .env file
-# Check if .env exists
-# if so move it to .env.bak.DATE
-cp .env.example .env
-cp .env.example .env.testing
+# Create .env file if it doesn't exist
+if [ ! -f ".env" ]; then
+  cp .env.example .env
+fi
+# Create .env.testing file if it doesn't exist
+if [ ! -f ".env.testing" ]; then
+  cp .env.example .env.testing
+fi
 
-# Run platform-specific sed commands
-eval $SED_INPLACE "s|^DB_DATABASE=<DB_DATABASE>|DB_DATABASE=$db_name|" .env
-eval $SED_INPLACE "s|^DB_USERNAME=<DB_USERNAME>|DB_USERNAME=$db_user|" .env
-eval $SED_INPLACE "s|^DB_PASSWORD=<DB_PASSWORD>|DB_PASSWORD=$db_pass|" .env
+# Function to set or replace env variable
+set_env_var() {
+  var_name=$1
+  var_value=$2
+  env_file=$3
+  if grep -q "^${var_name}=" "${env_file}"; then
+    eval $SED_INPLACE "s/^${var_name}=.*/${var_name}=${var_value}/" "${env_file}"
+  else
+    echo "${var_name}=${var_value}" >> "${env_file}"
+  fi
+}
 
-eval $SED_INPLACE "s|^DB_CONNECTION=pgsql|DB_CONNECTION=sqlite|" .env.testing
-eval $SED_INPLACE "s|^DB_DATABASE=<DB_DATABASE>|DB_DATABASE=:memory:|" .env.testing
+# Set variables
+set_env_var "DB_DATABASE" "$db_name" ".env"
+set_env_var "DB_USERNAME" "$db_user" ".env"
+set_env_var "DB_PASSWORD" "$db_pw" ".env"
+
+set_env_var "DB_CONNECTION" "sqlite" ".env.testing"
+set_env_var "DB_DATABASE" ":memory:" ".env.testing"
+
 # Comment out the unneeded database fields in the testing file
-eval $SED_INPLACE "s|^DB_HOST=db|# DB_HOST=db|" .env.testing
-eval $SED_INPLACE "s|^DB_PORT=5432|# DB_PORT=5432|" .env.testing
-eval $SED_INPLACE "s|^DB_USERNAME=<DB_USERNAME>|# DB_USERNAME=<DB_USERNAME>|" .env.testing
-eval $SED_INPLACE "s|^DB_PASSWORD=<DB_PASSWORD>|# DB_PASSWORD=<DB_PASSWORD>|" .env.testing
+eval $SED_INPLACE "/^DB_USERNAME=/s/^/#/" .env.testing
+eval $SED_INPLACE "/^DB_PASSWORD=/s/^/#/" .env.testing
+eval $SED_INPLACE "/^DB_HOST=/s/^/#/" .env.testing
+eval $SED_INPLACE "/^DB_PORT=/s/^/#/" .env.testing
 
 # Install dependencies
 composer install
 pnpm install && pnpm build
 
+# Build and start containers
 docker compose build
 docker compose up -d
 
+# Migrate database tables and generate app keys
 docker compose exec app php artisan migrate
 docker compose exec app php artisan key:generate
 docker compose exec app php artisan key:generate --env=testing

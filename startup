@@ -12,6 +12,10 @@ else
     exit 1
 fi
 
+# Ask if user wants a fresh setup
+read -p "Do you want a fresh database setup? This will remove existing data. [y/N]: " fresh_setup
+fresh_setup=${fresh_setup:-N}
+
 # Get database credentials from user
 read -p "DB Name [db]: " db_name
 db_name=${db_name:-db}
@@ -23,6 +27,9 @@ read -s -p "DB Password [secret]: " input
 echo
 db_pw=${input:-secret}
 
+if [[ "$fresh_setup" =~ ^[Yy]$ ]]; then
+  rm .env .env.testing
+fi
 # Create .env file if it doesn't exist
 if [ ! -f ".env" ]; then
   cp .env.example .env
@@ -44,6 +51,28 @@ set_env_var() {
   fi
 }
 
+# Function to wait for database to be ready
+wait_for_db() {
+  echo "Waiting for database to be ready..."
+  local max_attempts=30
+  local attempt=0
+  
+  while [ $attempt -lt $max_attempts ]; do
+    # Test from the app container using Laravel's database connection
+    if docker compose exec app php artisan db:show > /dev/null 2>&1; then
+      echo "Database is ready!"
+      return 0
+    fi
+    
+    attempt=$((attempt + 1))
+    echo "Attempt $attempt/$max_attempts: Database not ready yet, waiting..."
+    sleep 2
+  done
+  
+  echo "Database failed to become ready after $max_attempts attempts"
+  return 1
+}
+
 # Set variables
 set_env_var "DB_DATABASE" "$db_name" ".env"
 set_env_var "DB_USERNAME" "$db_user" ".env"
@@ -62,11 +91,34 @@ eval $SED_INPLACE "/^DB_PORT=/s/^/#/" .env.testing
 composer install
 pnpm install && pnpm build
 
+# Clean up for fresh setup if requested
+if [[ "$fresh_setup" =~ ^[Yy]$ ]]; then
+    echo "Cleaning up existing containers and volumes for fresh setup..."
+    docker compose down -v
+fi
+
 # Build and start containers
 docker compose build
 docker compose up -d
 
-# Migrate database tables and generate app keys
-docker compose exec app php artisan migrate
-docker compose exec app php artisan key:generate
-docker compose exec app php artisan key:generate --env=testing
+# Clear any cached config
+docker compose exec app php artisan config:clear
+
+# Wait for database to be ready before running migrations
+if wait_for_db; then
+  # Migrate database tables and generate app keys
+  docker compose exec app php artisan migrate --force
+else
+  echo "Failed to connect to database. Please check your database configuration."
+  echo "Try running with fresh setup option to reset the database."
+  exit 1
+fi
+
+# Generate app keys ONLY on fresh start
+if [[ "$fresh_setup" =~ ^[Yy]$ ]]; then
+  echo "Generating keys..."
+  docker compose exec app php artisan key:generate
+  docker compose exec app php artisan key:generate --env=testing
+fi
+
+echo "Setup complete! Your application should be available at http://localhost:8080"

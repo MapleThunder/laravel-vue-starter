@@ -1,1 +1,11 @@
-docker compose down
+#!/bin/bash
+
+# Ask if user wants a fresh setup
+read -p "Do you want to remove existing data. [y/N]: " fresh_setup
+fresh_setup=${fresh_setup:-N}
+
+if [[ "$fresh_setup" =~ ^[Yy]$ ]]; then
+    docker compose down -v
+else
+    docker compose down
+fi

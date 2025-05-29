@@ -51,28 +51,6 @@ set_env_var() {
   fi
 }
 
-# Function to wait for database to be ready
-wait_for_db() {
-  echo "Waiting for database to be ready..."
-  local max_attempts=30
-  local attempt=0
-  
-  while [ $attempt -lt $max_attempts ]; do
-    # Test from the app container using Laravel's database connection
-    if docker compose exec app php artisan db:show > /dev/null 2>&1; then
-      echo "Database is ready!"
-      return 0
-    fi
-    
-    attempt=$((attempt + 1))
-    echo "Attempt $attempt/$max_attempts: Database not ready yet, waiting..."
-    sleep 2
-  done
-  
-  echo "Database failed to become ready after $max_attempts attempts"
-  return 1
-}
-
 # Set variables
 set_env_var "DB_DATABASE" "$db_name" ".env"
 set_env_var "DB_USERNAME" "$db_user" ".env"
@@ -99,26 +77,23 @@ fi
 
 # Build and start containers
 docker compose build
+
+if [[ "$fresh_setup" =~ ^[Yy]$ ]]; then
+  # Start only the database initially
+  docker compose up -d db
+  # Wait for database
+  # wait_for_db
+  # Generate app key in a temporary container
+  docker compose run --rm app php artisan key:generate
+  docker compose run --rm app php artisan key:generate --env=testing
+fi
+
 docker compose up -d
 
 # Clear any cached config
 docker compose exec app php artisan config:clear
 
-# Wait for database to be ready before running migrations
-if wait_for_db; then
-  # Migrate database tables and generate app keys
-  docker compose exec app php artisan migrate --force
-else
-  echo "Failed to connect to database. Please check your database configuration."
-  echo "Try running with fresh setup option to reset the database."
-  exit 1
-fi
-
-# Generate app keys ONLY on fresh start
-if [[ "$fresh_setup" =~ ^[Yy]$ ]]; then
-  echo "Generating keys..."
-  docker compose exec app php artisan key:generate
-  docker compose exec app php artisan key:generate --env=testing
-fi
+# Migrate database tables and generate app keys
+docker compose exec app php artisan migrate --force
 
 echo "Setup complete! Your application should be available at http://localhost:8080"
